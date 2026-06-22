@@ -11,8 +11,8 @@
                 name: "Z-MAiN",
                 short_name: "Z-MAiN",
                 description: "Acceso rápido a tus sitios",
-                start_url: "/index.html",
-                scope: "/",
+                start_url: ".",
+                scope: ".",
                 display: "standalone",
                 theme_color: "#000000",
                 background_color: "#000000",
@@ -71,21 +71,6 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-        }
-        .btn-install {
-            background: #ff2e62;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 40px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-        .btn-install:hover {
-            opacity: 0.8;
-            transform: scale(0.98);
         }
         .grid {
             display: grid;
@@ -222,85 +207,14 @@
         .btn-primary:hover, .btn-secondary:hover {
             opacity: 0.8;
         }
-        .webview-container {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 10000;
-            background: #0a0a0a;
-            flex-direction: column;
-        }
-        .webview-container.active {
-            display: flex;
-        }
-        .webview-header {
-            padding: 12px 16px;
-            background: #1c1c1e;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            flex-shrink: 0;
-        }
-        .webview-back {
-            background: transparent;
-            border: none;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 4px 8px;
-        }
-        .webview-title {
-            color: white;
-            font-weight: 600;
-            flex: 1;
-            font-size: 14px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .webview-close {
-            background: transparent;
-            border: none;
-            color: #8e8e93;
-            font-size: 20px;
-            cursor: pointer;
-            padding: 4px 8px;
-        }
-        .webview-frame {
-            width: 100%;
-            flex: 1;
-            border: none;
-            background: white;
-        }
-        .webview-loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #8e8e93;
-            font-size: 14px;
-        }
     </style>
 </head>
 <body>
-    <div class="container" id="mainView">
+    <div class="container">
         <div class="header">
             <h1>🚀 Z-MAiN</h1>
         </div>
         <div class="grid" id="siteGrid"></div>
-    </div>
-
-    <div class="webview-container" id="webviewContainer">
-        <div class="webview-header">
-            <button class="webview-back" onclick="closeWebView()">←</button>
-            <span class="webview-title" id="pageTitle">Cargando...</span>
-            <button class="webview-close" onclick="closeWebView()">✕</button>
-        </div>
-        <iframe class="webview-frame" id="webviewFrame"></iframe>
     </div>
 
     <div class="modal-overlay" id="addModal">
@@ -425,39 +339,13 @@
             });
         }
 
-        function deleteSiteFromDB(id) {
-            return new Promise((resolve, reject) => {
-                openDB().then(db => {
-                    const transaction = db.transaction([STORE_NAME], 'readwrite');
-                    const store = transaction.objectStore(STORE_NAME);
-                    const request = store.delete(id);
-                    request.onsuccess = () => {
-                        resolve();
-                    };
-                    request.onerror = () => {
-                        reject(request.error);
-                    };
-                }).catch(reject);
-            });
-        }
-
         function navigateTo(url) {
-            const container = document.getElementById('webviewContainer');
-            const frame = document.getElementById('webviewFrame');
-            container.classList.add('active');
-            frame.src = url;
-            try {
-                const urlObj = new URL(url);
-                document.getElementById('pageTitle').textContent = urlObj.hostname;
-            } catch {
-                document.getElementById('pageTitle').textContent = 'Sitio web';
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+            if (isStandalone) {
+                window.location.href = url;
+            } else {
+                window.open(url, '_blank');
             }
-        }
-
-        function closeWebView() {
-            const container = document.getElementById('webviewContainer');
-            container.classList.remove('active');
-            document.getElementById('webviewFrame').src = '';
         }
 
         async function renderSites() {
@@ -716,18 +604,6 @@
             alert('📌 Busca el icono "Instalar" en la barra de direcciones');
             return false;
         };
-
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.card').forEach(card => {
-                card.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const url = this.getAttribute('data-url');
-                    if (url) {
-                        navigateTo(url);
-                    }
-                });
-            });
-        });
     </script>
 </body>
 </html>
