@@ -265,6 +265,9 @@
         // 3.1 - CONFIGURACIÓN
         // ============================================
         const APP_NAME = 'Z-NOS';
+        const DB_NAME = 'ZNoSDB';
+        const STORE_NAME = 'sites';
+        const DB_VERSION = 1;
         
         // Lista de sitios por defecto
         const DEFAULT_SITES = [
@@ -279,40 +282,155 @@
         ];
 
         // ============================================
-        // 3.2 - GESTIÓN DE SITIOS (localStorage)
+        // 3.2 - GESTIÓN DE SITIOS (IndexedDB)
         // ============================================
-        function getSites() {
-            const stored = localStorage.getItem('z-nos-sites');
-            if (stored) {
-                try {
-                    return JSON.parse(stored);
-                } catch {
-                    return DEFAULT_SITES;
+        let db = null;
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                if (db) {
+                    resolve(db);
+                    return;
                 }
-            }
-            return DEFAULT_SITES;
+
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+                request.onerror = () => {
+                    console.error('❌ Error al abrir DB:', request.error);
+                    reject(request.error);
+                };
+
+                request.onsuccess = () => {
+                    db = request.result;
+                    console.log('✅ DB abierta correctamente');
+                    resolve(db);
+                };
+
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const store = db.createObjectStore(STORE_NAME, { 
+                            keyPath: 'id', 
+                            autoIncrement: true 
+                        });
+                        store.createIndex('name', 'name', { unique: false });
+                        console.log('📦 Store creada:', STORE_NAME);
+                    }
+                };
+            });
         }
 
-        function saveSites(sites) {
-            localStorage.setItem('z-nos-sites', JSON.stringify(sites));
+        function getSites() {
+            return new Promise((resolve, reject) => {
+                openDB().then(db => {
+                    const transaction = db.transaction([STORE_NAME], 'readonly');
+                    const store = transaction.objectStore(STORE_NAME);
+                    const request = store.getAll();
+
+                    request.onsuccess = () => {
+                        const sites = request.result;
+                        if (sites.length === 0) {
+                            // Si no hay datos, guardar los default
+                            saveDefaultSites().then(() => {
+                                resolve(DEFAULT_SITES);
+                            });
+                        } else {
+                            resolve(sites);
+                        }
+                    };
+
+                    request.onerror = () => {
+                        reject(request.error);
+                    };
+                }).catch(reject);
+            });
         }
 
-        function renderSites() {
+        function saveDefaultSites() {
+            return new Promise((resolve, reject) => {
+                openDB().then(db => {
+                    const transaction = db.transaction([STORE_NAME], 'readwrite');
+                    const store = transaction.objectStore(STORE_NAME);
+                    
+                    // Limpiar datos existentes
+                    store.clear();
+
+                    // Insertar sitios default
+                    let completed = 0;
+                    DEFAULT_SITES.forEach(site => {
+                        const request = store.add(site);
+                        request.onsuccess = () => {
+                            completed++;
+                            if (completed === DEFAULT_SITES.length) {
+                                resolve();
+                            }
+                        };
+                        request.onerror = () => {
+                            reject(request.error);
+                        };
+                    });
+                }).catch(reject);
+            });
+        }
+
+        function addSiteToDB(site) {
+            return new Promise((resolve, reject) => {
+                openDB().then(db => {
+                    const transaction = db.transaction([STORE_NAME], 'readwrite');
+                    const store = transaction.objectStore(STORE_NAME);
+                    const request = store.add(site);
+
+                    request.onsuccess = () => {
+                        resolve(request.result);
+                    };
+
+                    request.onerror = () => {
+                        reject(request.error);
+                    };
+                }).catch(reject);
+            });
+        }
+
+        function deleteSiteFromDB(id) {
+            return new Promise((resolve, reject) => {
+                openDB().then(db => {
+                    const transaction = db.transaction([STORE_NAME], 'readwrite');
+                    const store = transaction.objectStore(STORE_NAME);
+                    const request = store.delete(id);
+
+                    request.onsuccess = () => {
+                        resolve();
+                    };
+
+                    request.onerror = () => {
+                        reject(request.error);
+                    };
+                }).catch(reject);
+            });
+        }
+
+        async function renderSites() {
             const grid = document.getElementById('siteGrid');
-            const sites = getSites();
             
-            grid.innerHTML = sites.map(site => `
-                <a href="${site.url}" class="card">
-                    <span class="icon">${site.icon || '🌐'}</span>
-                    <div class="name">${site.name}</div>
-                    <div class="domain">${new URL(site.url).hostname}</div>
-                </a>
-            `).join('') + `
-                <div class="add-btn" onclick="openModal()">
-                    <span class="plus">➕</span>
-                    <span style="font-size:12px;">Agregar sitio</span>
-                </div>
-            `;
+            try {
+                const sites = await getSites();
+                
+                grid.innerHTML = sites.map(site => `
+                    <a href="${site.url}" target="_blank" class="card">
+                        <span class="icon">${site.icon || '🌐'}</span>
+                        <div class="name">${site.name}</div>
+                        <div class="domain">${new URL(site.url).hostname}</div>
+                    </a>
+                `).join('') + `
+                    <div class="add-btn" onclick="openModal()">
+                        <span class="plus">➕</span>
+                        <span style="font-size:12px;">Agregar sitio</span>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('❌ Error al renderizar:', error);
+                grid.innerHTML = '<p style="color:#8e8e93;">Error al cargar los sitios</p>';
+            }
         }
 
         // ============================================
@@ -329,7 +447,7 @@
             document.getElementById('siteIcon').value = '';
         }
 
-        function addSite() {
+        async function addSite() {
             const name = document.getElementById('siteName').value.trim();
             let url = document.getElementById('siteUrl').value.trim();
             const icon = document.getElementById('siteIcon').value.trim() || '🌐';
@@ -351,11 +469,15 @@
                 return;
             }
 
-            const sites = getSites();
-            sites.push({ name, url, icon });
-            saveSites(sites);
-            renderSites();
-            closeModal();
+            try {
+                await addSiteToDB({ name, url, icon });
+                await renderSites();
+                closeModal();
+                console.log('✅ Sitio agregado a IndexedDB');
+            } catch (error) {
+                console.error('❌ Error al agregar sitio:', error);
+                alert('Error al guardar el sitio');
+            }
         }
 
         // ============================================
@@ -525,7 +647,6 @@
         // 3.5 - SERVICE WORKER
         // ============================================
         if ('serviceWorker' in navigator) {
-            // El SW se registra desde el mismo dominio, esperamos que sw.js exista
             navigator.serviceWorker.register('/sw.js', { scope: '/' })
                 .then(() => console.log('✅ SW registrado'))
                 .catch(() => console.log('⚠️ SW no disponible'));
@@ -549,7 +670,18 @@
         // ============================================
         // 3.7 - INICIALIZACIÓN
         // ============================================
-        renderSites();
+        // Inicializar DB y renderizar
+        async function init() {
+            try {
+                await openDB();
+                await renderSites();
+                console.log('🚀 Z-NOS Portal listo con IndexedDB');
+            } catch (error) {
+                console.error('❌ Error en init:', error);
+            }
+        }
+
+        init();
 
         // Mostrar notificación después de 2 segundos si no está instalada
         if (!window.matchMedia('(display-mode: standalone)').matches) {
@@ -567,8 +699,6 @@
             alert('📌 Busca el icono "Instalar" en la barra de direcciones');
             return false;
         };
-
-        console.log('🚀 Z-NOS Portal listo');
     </script>
 </body>
 </html>
