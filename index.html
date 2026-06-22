@@ -72,21 +72,6 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .btn-install {
-            background: #ff2e62;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 40px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-        .btn-install:hover {
-            opacity: 0.8;
-            transform: scale(0.98);
-        }
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -228,7 +213,6 @@
     <div class="container">
         <div class="header">
             <h1>🚀 Z-MAiN</h1>
-            <!-- <button class="btn-install" onclick="window.installPWA?.()">📲 Instalar</button> -->
         </div>
         <div class="grid" id="siteGrid"></div>
     </div>
@@ -368,11 +352,11 @@
             try {
                 const sites = await getSites();
                 grid.innerHTML = sites.map(site => `
-                    <a href="${site.url}" class="card" target="_self">
+                    <div class="card" onclick="navigateTo('${site.url}')">
                         <span class="icon">${site.icon || '🌐'}</span>
                         <div class="name">${site.name}</div>
                         <div class="domain">${new URL(site.url).hostname}</div>
-                    </a>
+                    </div>
                 `).join('') + `
                     <div class="add-btn" onclick="openModal()">
                         <span class="plus">➕</span>
@@ -384,6 +368,11 @@
                 grid.innerHTML = '<p style="color:#8e8e93;">Error al cargar los sitios</p>';
             }
         }
+
+        function navigateTo(url) {
+            window.location.href = url;
+        }
+
         function openModal() {
             document.getElementById('addModal').classList.add('active');
         }
