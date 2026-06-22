@@ -11,8 +11,8 @@
                 name: "Z-MAiN",
                 short_name: "Z-MAiN",
                 description: "Acceso rápido a tus sitios",
-                start_url: ".",
-                scope: ".",
+                start_url: "/index.html",
+                scope: "/",
                 display: "standalone",
                 theme_color: "#000000",
                 background_color: "#000000",
@@ -71,6 +71,21 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+        }
+        .btn-install {
+            background: #ff2e62;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn-install:hover {
+            opacity: 0.8;
+            transform: scale(0.98);
         }
         .grid {
             display: grid;
@@ -213,10 +228,10 @@
     <div class="container">
         <div class="header">
             <h1>🚀 Z-MAiN</h1>
+            <!-- <button class="btn-install" onclick="window.installPWA?.()">📲 Instalar</button> -->
         </div>
         <div class="grid" id="siteGrid"></div>
     </div>
-
     <div class="modal-overlay" id="addModal">
         <div class="modal">
             <h2>➕ Agregar sitio</h2>
@@ -229,7 +244,6 @@
             </div>
         </div>
     </div>
-
     <script>
         const APP_NAME = 'Z-MAiN';
         const DB_NAME = 'ZMainDB';
@@ -246,7 +260,6 @@
             { name: 'Nostr', url: 'https://nostr.com', icon: '⚡' },
         ];
         let db = null;
-
         function openDB() {
             return new Promise((resolve, reject) => {
                 if (db) {
@@ -276,7 +289,6 @@
                 };
             });
         }
-
         function getSites() {
             return new Promise((resolve, reject) => {
                 openDB().then(db => {
@@ -299,7 +311,6 @@
                 }).catch(reject);
             });
         }
-
         function saveDefaultSites() {
             return new Promise((resolve, reject) => {
                 openDB().then(db => {
@@ -322,7 +333,6 @@
                 }).catch(reject);
             });
         }
-
         function addSiteToDB(site) {
             return new Promise((resolve, reject) => {
                 openDB().then(db => {
@@ -338,26 +348,31 @@
                 }).catch(reject);
             });
         }
-
-        function navigateTo(url) {
-            const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-            if (isStandalone) {
-                window.location.href = url;
-            } else {
-                window.open(url, '_blank');
-            }
+        function deleteSiteFromDB(id) {
+            return new Promise((resolve, reject) => {
+                openDB().then(db => {
+                    const transaction = db.transaction([STORE_NAME], 'readwrite');
+                    const store = transaction.objectStore(STORE_NAME);
+                    const request = store.delete(id);
+                    request.onsuccess = () => {
+                        resolve();
+                    };
+                    request.onerror = () => {
+                        reject(request.error);
+                    };
+                }).catch(reject);
+            });
         }
-
         async function renderSites() {
             const grid = document.getElementById('siteGrid');
             try {
                 const sites = await getSites();
                 grid.innerHTML = sites.map(site => `
-                    <div class="card" onclick="navigateTo('${site.url}')">
+                    <a href="${site.url}" class="card">
                         <span class="icon">${site.icon || '🌐'}</span>
                         <div class="name">${site.name}</div>
                         <div class="domain">${new URL(site.url).hostname}</div>
-                    </div>
+                    </a>
                 `).join('') + `
                     <div class="add-btn" onclick="openModal()">
                         <span class="plus">➕</span>
@@ -369,18 +384,15 @@
                 grid.innerHTML = '<p style="color:#8e8e93;">Error al cargar los sitios</p>';
             }
         }
-
         function openModal() {
             document.getElementById('addModal').classList.add('active');
         }
-
         function closeModal() {
             document.getElementById('addModal').classList.remove('active');
             document.getElementById('siteName').value = '';
             document.getElementById('siteUrl').value = '';
             document.getElementById('siteIcon').value = '';
         }
-
         async function addSite() {
             const name = document.getElementById('siteName').value.trim();
             let url = document.getElementById('siteUrl').value.trim();
@@ -408,10 +420,8 @@
                 alert('Error al guardar el sitio');
             }
         }
-
         let deferredPrompt = null;
         let notificationShown = false;
-
         function showInstallNotification() {
             if (notificationShown || window.matchMedia('(display-mode: standalone)').matches) return;
             notificationShown = true;
@@ -466,7 +476,6 @@
             `;
             document.head.appendChild(style);
         }
-
         function showInstallModal() {
             if (document.getElementById('pwa-modal')) return;
             const modal = document.createElement('div');
@@ -559,25 +568,21 @@
                 if (e.target === modal) modal.remove();
             });
         }
-
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js', { scope: '/' })
                 .then(() => console.log('✅ SW registrado'))
                 .catch(() => console.log('⚠️ SW no disponible'));
         }
-
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
             console.log('📲 Instalación disponible');
         });
-
         window.addEventListener('appinstalled', () => {
             console.log('🎉 App instalada');
             document.getElementById('pwa-modal')?.remove();
             document.getElementById('pwa-notif')?.remove();
         });
-
         async function init() {
             try {
                 await openDB();
@@ -587,13 +592,10 @@
                 console.error('❌ Error en init:', error);
             }
         }
-
         init();
-
         if (!window.matchMedia('(display-mode: standalone)').matches) {
             setTimeout(showInstallNotification, 2000);
         }
-
         window.installPWA = async function() {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
