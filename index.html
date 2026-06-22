@@ -222,7 +222,7 @@
         .btn-primary:hover, .btn-secondary:hover {
             opacity: 0.8;
         }
-        #webViewContainer {
+        .webview-container {
             display: none;
             position: fixed;
             top: 0;
@@ -231,9 +231,10 @@
             height: 100%;
             z-index: 10000;
             background: #0a0a0a;
+            flex-direction: column;
         }
-        #webViewContainer.active {
-            display: block;
+        .webview-container.active {
+            display: flex;
         }
         .webview-header {
             padding: 12px 16px;
@@ -242,6 +243,7 @@
             align-items: center;
             gap: 12px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
+            flex-shrink: 0;
         }
         .webview-back {
             background: transparent;
@@ -268,11 +270,19 @@
             cursor: pointer;
             padding: 4px 8px;
         }
-        #webViewFrame {
+        .webview-frame {
             width: 100%;
-            height: calc(100% - 60px);
+            flex: 1;
             border: none;
             background: white;
+        }
+        .webview-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #8e8e93;
+            font-size: 14px;
         }
     </style>
 </head>
@@ -284,13 +294,13 @@
         <div class="grid" id="siteGrid"></div>
     </div>
 
-    <div id="webViewContainer">
+    <div class="webview-container" id="webviewContainer">
         <div class="webview-header">
             <button class="webview-back" onclick="closeWebView()">←</button>
             <span class="webview-title" id="pageTitle">Cargando...</span>
             <button class="webview-close" onclick="closeWebView()">✕</button>
         </div>
-        <iframe id="webViewFrame"></iframe>
+        <iframe class="webview-frame" id="webviewFrame"></iframe>
     </div>
 
     <div class="modal-overlay" id="addModal">
@@ -432,27 +442,22 @@
         }
 
         function navigateTo(url) {
-            const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-            if (isStandalone) {
-                const container = document.getElementById('webViewContainer');
-                container.classList.add('active');
-                const frame = document.getElementById('webViewFrame');
-                frame.src = url;
-                try {
-                    const urlObj = new URL(url);
-                    document.getElementById('pageTitle').textContent = urlObj.hostname;
-                } catch {
-                    document.getElementById('pageTitle').textContent = 'Sitio web';
-                }
-            } else {
-                window.location.href = url;
+            const container = document.getElementById('webviewContainer');
+            const frame = document.getElementById('webviewFrame');
+            container.classList.add('active');
+            frame.src = url;
+            try {
+                const urlObj = new URL(url);
+                document.getElementById('pageTitle').textContent = urlObj.hostname;
+            } catch {
+                document.getElementById('pageTitle').textContent = 'Sitio web';
             }
         }
 
         function closeWebView() {
-            const container = document.getElementById('webViewContainer');
+            const container = document.getElementById('webviewContainer');
             container.classList.remove('active');
-            document.getElementById('webViewFrame').src = '';
+            document.getElementById('webviewFrame').src = '';
         }
 
         async function renderSites() {
@@ -711,6 +716,18 @@
             alert('📌 Busca el icono "Instalar" en la barra de direcciones');
             return false;
         };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.card').forEach(card => {
+                card.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const url = this.getAttribute('data-url');
+                    if (url) {
+                        navigateTo(url);
+                    }
+                });
+            });
+        });
     </script>
 </body>
 </html>
