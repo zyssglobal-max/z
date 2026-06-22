@@ -302,7 +302,7 @@
             const sites = getSites();
             
             grid.innerHTML = sites.map(site => `
-                <a href="${site.url}" target="_blank" class="card">
+                <a href="${site.url}" class="card">
                     <span class="icon">${site.icon || '🌐'}</span>
                     <div class="name">${site.name}</div>
                     <div class="domain">${new URL(site.url).hostname}</div>
