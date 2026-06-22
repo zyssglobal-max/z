@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Z-NOS Portal</title>
+    
+    <!-- Manifest inline (generado con JavaScript) -->
+    <script>
+        // 📌 1. MANIFEST DINÁMICO
+        (function() {
+            const manifest = {
+                name: "Z-NOS Portal",
+                short_name: "Z-NOS",
+                description: "Acceso rápido a tus sitios",
+                start_url: "/pwa.html",
+                scope: "/",
+                display: "standalone",
+                theme_color: "#000000",
+                background_color: "#000000",
+                orientation: "portrait",
+                icons: [
+                    {
+                        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%23ff2e62' rx='4'/%3E%3Ctext x='12' y='18' text-anchor='middle' font-size='16' fill='white' font-weight='bold'%3EZ%3C/text%3E%3C/svg%3E",
+                        sizes: "192x192",
+                        type: "image/svg+xml",
+                        purpose: "any maskable"
+                    },
+                    {
+                        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%23ff2e62' rx='4'/%3E%3Ctext x='12' y='18' text-anchor='middle' font-size='16' fill='white' font-weight='bold'%3EZ%3C/text%3E%3C/svg%3E",
+                        sizes: "512x512",
+                        type: "image/svg+xml"
+                    }
+                ]
+            };
+
+            const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+            const manifestURL = URL.createObjectURL(blob);
+            
+            const link = document.createElement('link');
+            link.rel = 'manifest';
+            link.href = manifestURL;
+            document.head.appendChild(link);
+        })();
+    </script>
+
+    <style>
+        /* 🎨 2. ESTILOS */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0a0a0a;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: white;
+            padding: 16px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ff2e62, #ff6b35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .btn-install {
+            background: #ff2e62;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn-install:hover {
+            opacity: 0.8;
+            transform: scale(0.98);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: white;
+        }
+        .card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-4px);
+            border-color: #ff2e62;
+            box-shadow: 0 8px 24px rgba(255, 46, 98, 0.2);
+        }
+        .card .icon {
+            font-size: 36px;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .card .name {
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .card .domain {
+            font-size: 10px;
+            color: #8e8e93;
+            margin-top: 4px;
+            word-break: break-all;
+        }
+        .add-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 120px;
+            color: #8e8e93;
+        }
+        .add-btn:hover {
+            border-color: #ff2e62;
+            background: rgba(255, 46, 98, 0.05);
+        }
+        .add-btn .plus {
+            font-size: 30px;
+            margin-bottom: 4px;
+        }
+        
+        /* Modal para agregar sitio */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: #1c1c1e;
+            border-radius: 20px;
+            padding: 24px;
+            max-width: 400px;
+            width: 100%;
+            animation: popIn 0.3s ease;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal h2 {
+            color: white;
+            margin-bottom: 16px;
+            font-size: 20px;
+        }
+        .modal input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+        }
+        .modal input:focus {
+            border-color: #ff2e62;
+        }
+        .modal .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+        .modal .actions button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #ff2e62;
+            color: white;
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #8e8e93;
+        }
+        .btn-primary:hover, .btn-secondary:hover {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🚀 Z-NOS Portal</h1>
+            <button class="btn-install" onclick="window.installPWA?.()">📲 Instalar</button>
+        </div>
+
+        <!-- Grid de sitios -->
+        <div class="grid" id="siteGrid"></div>
+    </div>
+
+    <!-- Modal para agregar sitio -->
+    <div class="modal-overlay" id="addModal">
+        <div class="modal">
+            <h2>➕ Agregar sitio</h2>
+            <input type="text" id="siteName" placeholder="Nombre (ej: GitHub)" />
+            <input type="url" id="siteUrl" placeholder="URL (ej: https://github.com)" />
+            <input type="text" id="siteIcon" placeholder="Emoji (ej: 🐙)" maxlength="2" />
+            <div class="actions">
+                <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button class="btn-primary" onclick="addSite()">Agregar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔥 3. TODO EL CÓDIGO PWA + LÓGICA -->
+    <script>
+        // ============================================
+        // 3.1 - CONFIGURACIÓN
+        // ============================================
+        const APP_NAME = 'Z-NOS';
+        
+        // Lista de sitios por defecto
+        const DEFAULT_SITES = [
+            { name: 'GitHub', url: 'https://github.com', icon: '🐙' },
+            { name: 'Twitter', url: 'https://twitter.com', icon: '🐦' },
+            { name: 'Reddit', url: 'https://reddit.com', icon: '🤖' },
+            { name: 'YouTube', url: 'https://youtube.com', icon: '▶️' },
+            { name: 'Google', url: 'https://google.com', icon: '🔍' },
+            { name: 'ChatGPT', url: 'https://chat.openai.com', icon: '🤖' },
+            { name: 'Wikipedia', url: 'https://wikipedia.org', icon: '📚' },
+            { name: 'Nostr', url: 'https://nostr.com', icon: '⚡' },
+        ];
+
+        // ============================================
+        // 3.2 - GESTIÓN DE SITIOS (localStorage)
+        // ============================================
+        function getSites() {
+            const stored = localStorage.getItem('z-nos-sites');
+            if (stored) {
+                try {
+                    return JSON.parse(stored);
+                } catch {
+                    return DEFAULT_SITES;
+                }
+            }
+            return DEFAULT_SITES;
+        }
+
+        function saveSites(sites) {
+            localStorage.setItem('z-nos-sites', JSON.stringify(sites));
+        }
+
+        function renderSites() {
+            const grid = document.getElementById('siteGrid');
+            const sites = getSites();
+            
+            grid.innerHTML = sites.map(site => `
+                <a href="${site.url}" target="_blank" class="card">
+                    <span class="icon">${site.icon || '🌐'}</span>
+                    <div class="name">${site.name}</div>
+                    <div class="domain">${new URL(site.url).hostname}</div>
+                </a>
+            `).join('') + `
+                <div class="add-btn" onclick="openModal()">
+                    <span class="plus">➕</span>
+                    <span style="font-size:12px;">Agregar sitio</span>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // 3.3 - MODAL PARA AGREGAR
+        // ============================================
+        function openModal() {
+            document.getElementById('addModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('addModal').classList.remove('active');
+            document.getElementById('siteName').value = '';
+            document.getElementById('siteUrl').value = '';
+            document.getElementById('siteIcon').value = '';
+        }
+
+        function addSite() {
+            const name = document.getElementById('siteName').value.trim();
+            let url = document.getElementById('siteUrl').value.trim();
+            const icon = document.getElementById('siteIcon').value.trim() || '🌐';
+
+            if (!name || !url) {
+                alert('⚠️ Completa nombre y URL');
+                return;
+            }
+
+            // Validar URL
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
+
+            try {
+                new URL(url);
+            } catch {
+                alert('⚠️ URL inválida');
+                return;
+            }
+
+            const sites = getSites();
+            sites.push({ name, url, icon });
+            saveSites(sites);
+            renderSites();
+            closeModal();
+        }
+
+        // ============================================
+        // 3.4 - PWA: Instalación y Notificaciones
+        // ============================================
+        let deferredPrompt = null;
+        let notificationShown = false;
+
+        function showInstallNotification() {
+            if (notificationShown || window.matchMedia('(display-mode: standalone)').matches) return;
+            notificationShown = true;
+
+            const notif = document.createElement('div');
+            notif.id = 'pwa-notif';
+            notif.style.cssText = `
+                position: fixed; bottom: 20px; left: 20px; right: 20px;
+                max-width: 360px; margin: 0 auto;
+                background: rgba(28,28,30,0.96);
+                backdrop-filter: blur(20px);
+                border-radius: 14px; padding: 12px 16px;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+                z-index: 99998;
+                display: flex; align-items: center; gap: 12px;
+                cursor: pointer;
+                animation: slideUp 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            `;
+            notif.innerHTML = `
+                <div style="
+                    background: #ff2e62; border-radius: 10px;
+                    width: 40px; height: 40px;
+                    display: flex; align-items: center; justify-content: center;
+                    font-size: 20px; flex-shrink: 0;
+                ">🚀</div>
+                <div style="flex:1;">
+                    <div style="color:white; font-weight:600; font-size:14px;">Instalar ${APP_NAME}</div>
+                    <div style="color:#8e8e93; font-size:12px;">Mejor experiencia como app</div>
+                </div>
+                <button id="close-notif" style="
+                    background:transparent; border:none; color:#8e8e93;
+                    font-size:18px; cursor:pointer; padding:4px;
+                ">✕</button>
+            `;
+            document.body.appendChild(notif);
+
+            notif.addEventListener('click', (e) => {
+                if (e.target.id !== 'close-notif') {
+                    notif.remove();
+                    showInstallModal();
+                }
+            });
+            document.getElementById('close-notif')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                notif.remove();
+            });
+
+            // Animación CSS
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideUp {
+                    from { opacity: 0; transform: translateY(30px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        function showInstallModal() {
+            if (document.getElementById('pwa-modal')) return;
+
+            const modal = document.createElement('div');
+            modal.id = 'pwa-modal';
+            modal.style.cssText = `
+                position: fixed; top:0; left:0; width:100%; height:100%;
+                background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
+                z-index: 99999; display: flex;
+                justify-content: center; align-items: center;
+                padding: 16px;
+                animation: fadeIn 0.2s ease;
+            `;
+            modal.innerHTML = `
+                <div style="
+                    background: #1c1c1e; border-radius: 28px;
+                    width: 320px; max-width:100%; overflow:hidden;
+                    box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+                    animation: popIn 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
+                ">
+                    <div style="padding:24px 24px 16px; text-align:center;">
+                        <div style="
+                            background: #ff2e62; width:70px; height:70px;
+                            border-radius:18px; margin:0 auto 16px;
+                            display:flex; align-items:center; justify-content:center;
+                            font-size:32px;
+                        ">🚀</div>
+                        <h2 style="color:white; font-size:20px; margin:0 0 4px;">${APP_NAME}</h2>
+                        <p style="color:#8e8e93; font-size:13px;">Instala la app para acceso rápido</p>
+                    </div>
+                    <div style="padding:0 24px 20px;">
+                        <div style="border-top:0.5px solid rgba(255,255,255,0.1); margin-bottom:16px;"></div>
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <span style="color:#ff2e62;">✅</span>
+                                <span style="color:#d7dadc; font-size:13px;">Acceso rápido desde tu pantalla</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <span style="color:#ff2e62;">✅</span>
+                                <span style="color:#d7dadc; font-size:13px;">Sin distracciones del navegador</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <span style="color:#ff2e62;">✅</span>
+                                <span style="color:#d7dadc; font-size:13px;">Funciona offline</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="padding:0 24px 24px;">
+                        <button id="pwa-install-btn" style="
+                            width:100%; padding:14px;
+                            background:#ff2e62; color:white;
+                            border:none; border-radius:40px;
+                            font-size:16px; font-weight:600;
+                            cursor:pointer; margin-bottom:12px;
+                        ">Instalar ahora</button>
+                        <button id="pwa-modal-close" style="
+                            width:100%; padding:10px;
+                            background:transparent; color:#8e8e93;
+                            border:none; border-radius:40px;
+                            font-size:14px; cursor:pointer;
+                        ">Ahora no</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Estilos de animación
+            const style2 = document.createElement('style');
+            style2.textContent = `
+                @keyframes fadeIn {
+                    from { opacity: 0; backdrop-filter: blur(0px); }
+                    to { opacity: 1; backdrop-filter: blur(8px); }
+                }
+                @keyframes popIn {
+                    from { opacity: 0; transform: scale(0.95); }
+                    to { opacity: 1; transform: scale(1); }
+                }
+            `;
+            document.head.appendChild(style2);
+
+            document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const result = await deferredPrompt.userChoice;
+                    deferredPrompt = null;
+                    if (result.outcome === 'accepted') modal.remove();
+                } else {
+                    alert('📌 Instalación:\n\nBusca el icono "Instalar" en la barra de direcciones');
+                    modal.remove();
+                }
+            });
+
+            document.getElementById('pwa-modal-close')?.addEventListener('click', () => modal.remove());
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+        }
+
+        // ============================================
+        // 3.5 - SERVICE WORKER
+        // ============================================
+        if ('serviceWorker' in navigator) {
+            // El SW se registra desde el mismo dominio, esperamos que sw.js exista
+            navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                .then(() => console.log('✅ SW registrado'))
+                .catch(() => console.log('⚠️ SW no disponible'));
+        }
+
+        // ============================================
+        // 3.6 - EVENTOS PWA
+        // ============================================
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log('📲 Instalación disponible');
+        });
+
+        window.addEventListener('appinstalled', () => {
+            console.log('🎉 App instalada');
+            document.getElementById('pwa-modal')?.remove();
+            document.getElementById('pwa-notif')?.remove();
+        });
+
+        // ============================================
+        // 3.7 - INICIALIZACIÓN
+        // ============================================
+        renderSites();
+
+        // Mostrar notificación después de 2 segundos si no está instalada
+        if (!window.matchMedia('(display-mode: standalone)').matches) {
+            setTimeout(showInstallNotification, 2000);
+        }
+
+        // Exponer función de instalación
+        window.installPWA = async function() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                return outcome === 'accepted';
+            }
+            alert('📌 Busca el icono "Instalar" en la barra de direcciones');
+            return false;
+        };
+
+        console.log('🚀 Z-NOS Portal listo');
+    </script>
+</body>
+</html>
