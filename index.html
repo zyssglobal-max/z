@@ -72,6 +72,21 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+        .btn-install {
+            background: #ff2e62;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn-install:hover {
+            opacity: 0.8;
+            transform: scale(0.98);
+        }
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -207,53 +222,16 @@
         .btn-primary:hover, .btn-secondary:hover {
             opacity: 0.8;
         }
-
-        iframe {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: none;
-            z-index: 99999;
-            background: white;
-        }
-        iframe.active {
-            display: block;
-        }
-        .back-btn {
-            display: none;
-            position: fixed;
-            top: 16px;
-            left: 16px;
-            z-index: 100000;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            border: none;
-            border-radius: 30px;
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            backdrop-filter: blur(10px);
-            font-weight: 600;
-        }
-        .back-btn.active {
-            display: block;
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🚀 Z-MAiN</h1>
+            <!-- <button class="btn-install" onclick="window.installPWA?.()">📲 Instalar</button> -->
         </div>
         <div class="grid" id="siteGrid"></div>
     </div>
-
-    <button class="back-btn" id="backBtn" onclick="closeIframe()">← Volver</button>
-    <iframe id="webFrame"></iframe>
-
     <div class="modal-overlay" id="addModal">
         <div class="modal">
             <h2>➕ Agregar sitio</h2>
@@ -266,7 +244,6 @@
             </div>
         </div>
     </div>
-
     <script>
         const APP_NAME = 'Z-MAiN';
         const DB_NAME = 'ZMainDB';
@@ -283,7 +260,6 @@
             { name: 'Nostr', url: 'https://nostr.com', icon: '⚡' },
         ];
         let db = null;
-
         function openDB() {
             return new Promise((resolve, reject) => {
                 if (db) {
@@ -313,7 +289,6 @@
                 };
             });
         }
-
         function getSites() {
             return new Promise((resolve, reject) => {
                 openDB().then(db => {
@@ -336,7 +311,6 @@
                 }).catch(reject);
             });
         }
-
         function saveDefaultSites() {
             return new Promise((resolve, reject) => {
                 openDB().then(db => {
@@ -359,7 +333,6 @@
                 }).catch(reject);
             });
         }
-
         function addSiteToDB(site) {
             return new Promise((resolve, reject) => {
                 openDB().then(db => {
@@ -375,17 +348,31 @@
                 }).catch(reject);
             });
         }
-
+        function deleteSiteFromDB(id) {
+            return new Promise((resolve, reject) => {
+                openDB().then(db => {
+                    const transaction = db.transaction([STORE_NAME], 'readwrite');
+                    const store = transaction.objectStore(STORE_NAME);
+                    const request = store.delete(id);
+                    request.onsuccess = () => {
+                        resolve();
+                    };
+                    request.onerror = () => {
+                        reject(request.error);
+                    };
+                }).catch(reject);
+            });
+        }
         async function renderSites() {
             const grid = document.getElementById('siteGrid');
             try {
                 const sites = await getSites();
                 grid.innerHTML = sites.map(site => `
-                    <div class="card" onclick="openIframe('${site.url}')">
+                    <a href="${site.url}" class="card">
                         <span class="icon">${site.icon || '🌐'}</span>
                         <div class="name">${site.name}</div>
                         <div class="domain">${new URL(site.url).hostname}</div>
-                    </div>
+                    </a>
                 `).join('') + `
                     <div class="add-btn" onclick="openModal()">
                         <span class="plus">➕</span>
@@ -397,36 +384,15 @@
                 grid.innerHTML = '<p style="color:#8e8e93;">Error al cargar los sitios</p>';
             }
         }
-
-        function openIframe(url) {
-            const iframe = document.getElementById('webFrame');
-            const backBtn = document.getElementById('backBtn');
-            iframe.src = url;
-            iframe.classList.add('active');
-            backBtn.classList.add('active');
-            document.querySelector('.container').style.display = 'none';
-        }
-
-        function closeIframe() {
-            const iframe = document.getElementById('webFrame');
-            const backBtn = document.getElementById('backBtn');
-            iframe.src = '';
-            iframe.classList.remove('active');
-            backBtn.classList.remove('active');
-            document.querySelector('.container').style.display = 'block';
-        }
-
         function openModal() {
             document.getElementById('addModal').classList.add('active');
         }
-
         function closeModal() {
             document.getElementById('addModal').classList.remove('active');
             document.getElementById('siteName').value = '';
             document.getElementById('siteUrl').value = '';
             document.getElementById('siteIcon').value = '';
         }
-
         async function addSite() {
             const name = document.getElementById('siteName').value.trim();
             let url = document.getElementById('siteUrl').value.trim();
@@ -454,10 +420,8 @@
                 alert('Error al guardar el sitio');
             }
         }
-
         let deferredPrompt = null;
         let notificationShown = false;
-
         function showInstallNotification() {
             if (notificationShown || window.matchMedia('(display-mode: standalone)').matches) return;
             notificationShown = true;
@@ -512,7 +476,6 @@
             `;
             document.head.appendChild(style);
         }
-
         function showInstallModal() {
             if (document.getElementById('pwa-modal')) return;
             const modal = document.createElement('div');
@@ -605,25 +568,21 @@
                 if (e.target === modal) modal.remove();
             });
         }
-
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js', { scope: '/' })
                 .then(() => console.log('✅ SW registrado'))
                 .catch(() => console.log('⚠️ SW no disponible'));
         }
-
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
             console.log('📲 Instalación disponible');
         });
-
         window.addEventListener('appinstalled', () => {
             console.log('🎉 App instalada');
             document.getElementById('pwa-modal')?.remove();
             document.getElementById('pwa-notif')?.remove();
         });
-
         async function init() {
             try {
                 await openDB();
@@ -633,13 +592,10 @@
                 console.error('❌ Error en init:', error);
             }
         }
-
         init();
-
         if (!window.matchMedia('(display-mode: standalone)').matches) {
             setTimeout(showInstallNotification, 2000);
         }
-
         window.installPWA = async function() {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
