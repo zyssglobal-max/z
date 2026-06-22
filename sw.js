@@ -1,12 +1,9 @@
-// Service Worker para Z-NOS Portal
-const CACHE_NAME = 'z-nos-v1';
+const CACHE_NAME = 'z-main-v1';
 const urlsToCache = [
     '/',
-    '/pwa.html',
+    '/index.html',
     '/favicon.png'
 ];
-
-// Instalación
 self.addEventListener('install', event => {
     console.log('⚙️ SW instalando...');
     event.waitUntil(
@@ -18,8 +15,6 @@ self.addEventListener('install', event => {
             .then(() => self.skipWaiting())
     );
 });
-
-// Activación
 self.addEventListener('activate', event => {
     console.log('✅ SW activado');
     event.waitUntil(
@@ -35,44 +30,31 @@ self.addEventListener('activate', event => {
         }).then(() => self.clients.claim())
     );
 });
-
-// Fetch (offline support)
 self.addEventListener('fetch', event => {
     event.respondWith(
         caches.match(event.request)
             .then(response => {
-                // Cache hit - return response
                 if (response) {
                     return response;
                 }
-
-                // Clone request para fetch
                 const fetchRequest = event.request.clone();
-
                 return fetch(fetchRequest)
                     .then(response => {
-                        // Check if valid response
                         if (!response || response.status !== 200 || response.type !== 'basic') {
                             return response;
                         }
-
-                        // Clone para cache
                         const responseToCache = response.clone();
-
                         caches.open(CACHE_NAME)
                             .then(cache => {
                                 try {
                                     cache.put(event.request, responseToCache);
                                 } catch (e) {
-                                    // Ignorar errores de cache
                                 }
                             });
-
                         return response;
                     })
                     .catch(() => {
-                        // Offline fallback
-                        return new Response('🔴 Sin conexión\n\nPero Z-NOS sigue disponible', {
+                        return new Response('🔴 Sin conexión\n\nPero Z-MAiN sigue disponible', {
                             status: 503,
                             statusText: 'Service Unavailable'
                         });
